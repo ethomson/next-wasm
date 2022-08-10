@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^12.2.5-canary.0"
+    "next": "^12.2.4"
   },
   "devDependencies": {
     "@types/node": "^18.6.5",
