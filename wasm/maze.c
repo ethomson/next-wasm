@@ -17,8 +17,8 @@ const point cell_size = { 100, 100 };
 const point padding = { 12, 12 };
 const point margin = { 0, 0 };
 
-#define MAX_WIDTH 127
-#define MAX_HEIGHT 127
+#define MAX_WIDTH 254
+#define MAX_HEIGHT 254
 
 #define WALL_COLOR "#000000"
 #define WALK_COLOR "#0000ff"
@@ -314,7 +314,7 @@ __attribute__((used)) void generate_and_solve_maze(
     width = width > MAX_WIDTH ? MAX_WIDTH : width;
     height = height > MAX_HEIGHT ? MAX_HEIGHT : height;
 
-    unsigned char maze[height][width];
+    unsigned char maze[MAX_HEIGHT][MAX_WIDTH];
     point start, end, size = { width, height };
 
     rand_seed(seed);

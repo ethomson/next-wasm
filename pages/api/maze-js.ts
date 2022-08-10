@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 import { useRouter } from 'next/router'
 
 const IMAGE_SIZE: Point = { x: 300, y: 300 };
-const MAZE_SIZE: Point = { x: 31, y: 31 };
+const MAZE_SIZE: Point = { x: 127, y: 127 };
 
 const CELL_SIZE: Point = { x: 100, y: 100 };
 const PADDING: Point = { x: 12, y: 12 };
