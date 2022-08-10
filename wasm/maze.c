@@ -7,6 +7,12 @@ typedef struct {
     short y;
 } point;
 
+typedef struct {
+    short x;
+    short y;
+    short directions;
+} solvepath;
+
 const point cell_size = { 100, 100 };
 const point padding = { 12, 12 };
 const point margin = { 0, 0 };
@@ -26,15 +32,10 @@ const point margin = { 0, 0 };
 #define UNVISITED 2
 #define SOLUTION  3
 
-#define NORTH {  0, -1 }
-#define EAST  { -1, 0  }
-#define SOUTH {  0, 1  }
-#define WEST  {  1, 0  }
-
-static inline unsigned short points_eql(const point *a, const point *b)
-{
-    return (a && b && a->x == b->x && a->y == b->y);
-}
+#define NORTH 1
+#define EAST  2
+#define WEST  4
+#define SOUTH 8
 
 static uint32_t rand_state[4];
 
@@ -84,21 +85,55 @@ static uint32_t rand_next(void)
 	return result;
 }
 
-static void randomize_directions(point directions[4])
+static void randomize_directions(unsigned short directions[4])
 {
-    unsigned short i, j;
-    point temp;
+    unsigned short i, j, temp;
 
     for (i = 3; i > 0; i--) {
         j = rand_next() % (i + 1);
 
-        temp.x = directions[i].x;
-        temp.y = directions[i].y;
-        directions[i].x = directions[j].x;
-        directions[i].y = directions[j].y;
-        directions[j].x = temp.x;
-        directions[j].y = temp.y;
+        temp = directions[i];
+        directions[i] = directions[j];
+        directions[j] = temp;
     }
+}
+
+static void move(point *start, unsigned short direction, point *finish)
+{
+    switch (direction) {
+        case NORTH:
+            finish->x = start->x;
+            finish->y = start->y - 1;
+            break;
+        case EAST:
+            finish->x = start->x - 1;
+            finish->y = start->y;
+            break;
+        case SOUTH:
+            finish->x = start->x;
+            finish->y = start->y + 1;
+            break;
+        case WEST:
+            finish->x = start->x + 1;
+            finish->y = start->y;
+            break;
+    }
+}
+
+static unsigned short opposite(unsigned short direction)
+{
+    switch (direction) {
+        case NORTH:
+            return SOUTH;
+        case EAST:
+            return WEST;
+        case SOUTH:
+            return NORTH;
+        case WEST:
+            return EAST;
+    }
+
+    return 0;
 }
 
 static void generate_maze(
@@ -147,18 +182,14 @@ static void generate_maze(
      * yet seen it
      */
     while (remain > 0) {
-        point directions[] = { NORTH, EAST, SOUTH, WEST };
+        unsigned short directions[] = { NORTH, EAST, SOUTH, WEST };
         randomize_directions(directions);
 
         for (i = 0; i < 4; i++) {
-            point wall = {
-                p.x + directions[i].x,
-                p.y + directions[i].y
-            };
-            point neighbor = {
-                p.x + (directions[i].x * 2),
-                p.y + (directions[i].y * 2)
-            };
+            point wall, neighbor;
+
+            move(&p, directions[i], &wall);
+            move(&wall, directions[i], &neighbor);
 
             /* stop if we're walking outside the bounds of the maze */
             if (wall.x < 1 || wall.x > (size->x - 2) ||
@@ -184,72 +215,78 @@ extern void render_move_in(unsigned short x, unsigned short y);
 extern void render_move_out(unsigned short x, unsigned short y);
 extern void render_solution(unsigned short x, unsigned short y);
 
-static unsigned char solve_maze(
+static unsigned short solve_maze(
     unsigned char maze[MAX_HEIGHT][MAX_WIDTH],
     const point *size,
-    const point *current,
-    const point *previous,
+    const point *start,
     const point *end)
 {
-    if (maze[current->y][current->x] == WALL) {
-        return 0;
-    }
+    solvepath stack[MAX_WIDTH * MAX_HEIGHT];
+    unsigned short directions[] = { NORTH, EAST, SOUTH, WEST };
+    unsigned int i, depth = 0;
 
-    render_move_in(current->x, current->y);
+    stack[0].x = start->x;
+    stack[0].y = start->y;
+    stack[0].directions = 0;
+    depth = 0;
 
-    if (current->x == end->x && current->y == end->y) {
-        maze[current->y][current->x] = SOLUTION;
-        render_solution(current->x, current->y);
-        return 1;
-    }
+    render_move_in(start->x, start->y);
 
-    if (current->y > 0) {
-        point north = { current->x, current->y - 1 };
+    for (int z = 0; z < 100; z++) {
+        solvepath *current = &stack[depth];
+        point next;
+        unsigned short direction = 0;
 
-        if (!points_eql(&north, previous) &&
-            solve_maze(maze, size, &north, current, end)) {
-            maze[current->y][current->x] = SOLUTION;
-            render_solution(current->x, current->y);
-            return 1;
+        /* we're at the end; we have our solution path */
+        if (current->x == end->x && current->y == end->y) {
+            for (i = 0; i <= depth; i++) {
+                maze[stack[i].y][stack[i].x] = SOLUTION;
+                render_solution(stack[i].x, stack[i].y);
+            }
+
+            break;
         }
-    }
 
-    if (current->x > 0) {
-        point east = { current->x - 1, current->y };
-
-        if (!points_eql(&east, previous) &&
-            solve_maze(maze, size, &east, current, end)) {
-            maze[current->y][current->x] = SOLUTION;
-            render_solution(current->x, current->y);
-            return 1;
+        /* select the next direction to move in */
+        for (i = 0; i < 4; i++) {
+            if ((current->directions & directions[i]) == 0) {
+                direction = directions[i];
+                break;
+            }
         }
-    }
 
-    if (current->y < (size->y - 1)) {
-        point south = { current->x, current->y + 1 };
+        /* we've moved every direction, pop this cell off the stack */
+        if (!direction) {
+            render_move_out(current->x, current->y);
 
-        if (!points_eql(&south, previous) &&
-            solve_maze(maze, size, &south, current, end)) {
-            maze[current->y][current->x] = SOLUTION;
-            render_solution(current->x, current->y);
-            return 1;
+            if (depth-- == 0) {
+                return 0;
+            }
+
+            continue;
         }
-    }
 
-    if (current->x < (size->x - 1)) {
-        point west = { current->x + 1, current->y };
+        /* examine the next direction and mark it as seen */
+        current->directions |= directions[i];
+        move((point *)current, directions[i], &next);
 
-        if (!points_eql(&west, previous) &&
-            solve_maze(maze, size, &west, current, end)) {
-            maze[current->y][current->x] = SOLUTION;
-            render_solution(current->x, current->y);
-            return 1;
+        /* don't want to move into a wall or out of bounds */
+        if (next.x < 0 || next.x >= size->x ||
+            next.y < 0 || next.y > size->y ||
+            maze[next.y][next.x] == WALL) {
+            continue;
         }
+
+        render_move_in(next.x, next.y);
+
+        depth++;
+        stack[depth].x = next.x;
+        stack[depth].y = next.y;
+        stack[depth].directions = opposite(directions[i]);
+        break;
     }
 
-    render_move_out(current->x, current->y);
-
-    return 0;
+    return 1;
 }
 
 extern void render_maze_cell(
@@ -270,8 +307,7 @@ static void render_maze(
     }
 }
 
-//const char * EMSCRIPTEN_KEEPALIVE maze(uint32_t seed)
-__attribute__((used)) int generate_and_solve_maze(
+__attribute__((used)) void generate_and_solve_maze(
     int width,
     int height,
     int seed)
@@ -284,31 +320,5 @@ __attribute__((used)) int generate_and_solve_maze(
     generate_maze(maze, &size, &start, &end);
     render_maze(maze, &size);
 
-    solve_maze(maze, &size, &start, NULL, &end);
-
-    /*
-
-
-    const point total = {
-        margin.x * 2 + cell_size.x * size.x,
-        margin.y * 2 + cell_size.y * size.y
-    };
-
-    generate_maze(maze, &size, &start, &end);
-
-    start_svg(total.x / 30, total.y / 30, total.x, total.y);
-    show_maze(maze, &size);
-
-    start_maze(maze, &size);
-    solve(maze, &size, &start, NULL, &end);
-    end_maze();
-
-
-
-    end_svg();
-    */
-
-    return 42;
-
-//    return "hello, world.";
+    solve_maze(maze, &size, &start, &end);
 }
