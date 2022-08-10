@@ -17,8 +17,8 @@ const point cell_size = { 100, 100 };
 const point padding = { 12, 12 };
 const point margin = { 0, 0 };
 
-#define MAX_WIDTH 254
-#define MAX_HEIGHT 254
+#define MAX_WIDTH 127
+#define MAX_HEIGHT 127
 
 #define WALL_COLOR "#000000"
 #define WALK_COLOR "#0000ff"
@@ -221,7 +221,7 @@ static unsigned short solve_maze(
     const point *start,
     const point *end)
 {
-    solvepath stack[MAX_WIDTH * MAX_HEIGHT];
+    solvepath stack[size->x * size->y];
     unsigned short directions[] = { NORTH, EAST, SOUTH, WEST };
     unsigned int i, depth = 0;
 
@@ -232,7 +232,7 @@ static unsigned short solve_maze(
 
     render_move_in(start->x, start->y);
 
-    for (int z = 0; z < 100; z++) {
+    while (1) {
         solvepath *current = &stack[depth];
         point next;
         unsigned short direction = 0;
@@ -283,7 +283,6 @@ static unsigned short solve_maze(
         stack[depth].x = next.x;
         stack[depth].y = next.y;
         stack[depth].directions = opposite(directions[i]);
-        break;
     }
 
     return 1;
@@ -312,8 +311,11 @@ __attribute__((used)) void generate_and_solve_maze(
     int height,
     int seed)
 {
-    unsigned char maze[MAX_HEIGHT][MAX_WIDTH];
-    point size = { width, height }, start, end;
+    width = width > MAX_WIDTH ? MAX_WIDTH : width;
+    height = height > MAX_HEIGHT ? MAX_HEIGHT : height;
+
+    unsigned char maze[height][width];
+    point start, end, size = { width, height };
 
     rand_seed(seed);
 
