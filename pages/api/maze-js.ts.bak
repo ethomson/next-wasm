@@ -22,12 +22,6 @@ interface Point {
     y: number
 }
 
-interface SolvePath {
-    x: number,
-    y: number,
-    directions: Direction
-}
-
 interface Animation {
     tick: number,
     svg: string[]
@@ -188,7 +182,7 @@ function generateMaze(): [ Type[][], Point, Point ]
     // directions, removing the wall to the neighbor if we haven't
     // yet seen it
     while (unvisited > 0) {
-        let directions: Direction[] = [
+        let directions: Point[] = [
             Direction.North,
             Direction.East,
             Direction.South,
@@ -244,9 +238,9 @@ function pointsEqual(a: Point | undefined, b: Point | undefined) {
     return (a && b && a.x == b.x && a.y == b.y);
 }
 
-function solveMaze(maze: Type[][], start: Point, end: Point): string {
+function solveMaze(maze: Type[][], start: Point, end: Point) {
     let animation = { tick: 0.0, svg: new Array() };
-    let stack: SolvePath[] = new Array();
+    let stack: SolvePath = new Array();
     let directions: Direction[] = [ Direction.North, Direction.East, Direction.South, Direction.West ];
 
     stack.push({
@@ -256,8 +250,11 @@ function solveMaze(maze: Type[][], start: Point, end: Point): string {
     });
     renderMoveIn(start.x, start.y, animation);
 
-    while (true) {
+    for (let i = 0; i < 5000; i++) {
+//    while (true) {
         let current: SolvePath = stack[stack.length - 1];
+
+        console.log(`examining: ${current.x} ${current.y} ${current.directions}`);
 
         /* we're at the end; we have our solution path */
         if (current.x == end.x && current.y == end.y) {
@@ -270,7 +267,7 @@ function solveMaze(maze: Type[][], start: Point, end: Point): string {
         }
 
         /* select the next direction to move in */
-        let direction: Direction = Direction.None;
+        let direction: Direction.None;
         for (let d of directions) {
             if ((current.directions & d) == 0) {
                 direction = d;
@@ -280,9 +277,9 @@ function solveMaze(maze: Type[][], start: Point, end: Point): string {
 
         /* we've moved every direction, pop this cell off the stack */
         if (direction == Direction.None) {
-            renderMoveOut(current.x, current.y, animation);
+            renderMoveOut(current.x, current.y);
 
-            if (stack.length == 0) {
+            if (stack.size() == 0) {
                 throw new Error("failed to solve");
             }
 
@@ -310,7 +307,7 @@ function solveMaze(maze: Type[][], start: Point, end: Point): string {
         });
     }
 
-    return animation.svg.join("\n");
+    return true;
 }
 
 function renderStart(): string {

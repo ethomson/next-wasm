@@ -267,8 +267,8 @@ static unsigned short solve_maze(
         }
 
         /* examine the next direction and mark it as seen */
-        current->directions |= directions[i];
-        move((point *)current, directions[i], &next);
+        current->directions |= direction;
+        move((point *)current, direction, &next);
 
         /* don't want to move into a wall or out of bounds */
         if (next.x < 0 || next.x >= size->x ||
@@ -282,7 +282,7 @@ static unsigned short solve_maze(
         depth++;
         stack[depth].x = next.x;
         stack[depth].y = next.y;
-        stack[depth].directions = opposite(directions[i]);
+        stack[depth].directions = opposite(direction);
     }
 
     return 1;
