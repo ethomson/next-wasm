@@ -12,30 +12,37 @@ const Home: NextPage = () => {
       seed = "0" + seed;
     }
 
-    const jsimage = document.createElement("object");
-    const wasmimage = document.createElement("object");
+    const jsimage = document.createElement("img");
+    const wasmimage = document.createElement("img");
 
     const timeStart = new Date().getMilliseconds();
 
-    jsimage.onload = (() => {
+    let loadCount = 0;
+    const onLoad = ((type) => {
         const timeEnd = new Date().getMilliseconds();
-        console.log(`JS loaded: ${timeEnd - timeStart}`);
-    });
-    jsimage.type = "image/svg+xml";
-    jsimage.data = `/api/maze-js?seed=${seed}`;
+        console.log(`${type} loaded: ${timeEnd - timeStart}`);
 
-    wasmimage.onload = (() => {
-        const timeEnd = new Date().getMilliseconds();
-        console.log(`WASM loaded: ${timeEnd - timeStart}`);
+        if (++loadCount != 2) {
+            return;
+        }
+
+        jsimage.style.display = "inline-block";
+        wasmimage.style.display = "inline-block";
     });
-    wasmimage.type = "image/svg+xml";
-    wasmimage.data = `/api/maze-c?seed=${seed}`;
+
+    jsimage.style.display = "none";
+    jsimage.onload = (() => { onLoad("js"); });
+    jsimage.src = `/api/maze-js?seed=${seed}`;
+
+    wasmimage.style.display = "none";
+    wasmimage.onload = (() => { onLoad("wasm"); });
+    wasmimage.src = `/api/maze-c?seed=${seed}`;
 
     const mazeContainer = document.querySelector("#mazeContainer");
 
     let child;
     while (child = mazeContainer.firstChild) {
-      mazeContainer.removeChild(child);
+        mazeContainer.removeChild(child);
     }
 
     document.querySelector("#mazeContainer").appendChild(jsimage);
