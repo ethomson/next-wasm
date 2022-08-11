@@ -38,7 +38,7 @@ const Home: NextPage = () => {
 
       <main className={styles.main}>
         <div id="mazeMetadata" className={styles.mazeMetadata}>
-          Maze number: <span id="mazeNumber" className={styles.mazeNumber}>loading...</span>
+          Maze number: <span id="mazeNumber" className={styles.mazeNumber}>generating...</span>
         </div>
 
         <div id="mazeContainer" className={styles.mazeContainer}>
